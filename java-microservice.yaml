@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-microservice
+  labels:
+    app: java-microservice
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: java-microservice
+  template:
+    metadata:
+      labels:
+        app: java-microservice
+    spec:
+      containers:
+      - name: java-microservice
+        image: bryanmartineze/java-microservice:latest
+        ports:
+        - containerPort: 9090  # Ensure this matches your app's listening port
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-microservice
+  labels:
+    app: java-microservice
+spec:
+  selector:
+    app: java-microservice
+  type: NodePort
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80  # Exposed service port (you can change this to match the application)
+    targetPort: 9090  # Port on which the container is running (ensure this matches your app)
+    nodePort: 30080  # External port exposed on nodes
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: java-microservice
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: java-microservice.geeko.ninja  # Ensure this matches your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: java-microservice
+            port:
+              number: 80  # This must match the exposed service port
+  tls:
+  - hosts:
+    - java-microservice.geeko.ninja
+    secretName: rancher-ingress-tls  # Secret in the demo namespace for TLS
